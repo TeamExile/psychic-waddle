@@ -1,15 +1,11 @@
 using UnityEngine;
+using UnityEngine.InputSystem; // Import the new Input System
 
 namespace Friendslop
 {
-    /// <summary>
-    /// Player controller using modern Unity practices.
-    /// Can be extended to use the new Input System (com.unity.inputsystem).
-    /// </summary>
     [RequireComponent(typeof(Rigidbody))]
     public class PlayerController : MonoBehaviour
     {
-        // Default layer mask for ground detection
         private const int DEFAULT_GROUND_LAYER = 1;
 
         [Header("Movement Settings")]
@@ -26,11 +22,14 @@ namespace Friendslop
         private bool _isGrounded;
         private Vector3 _moveDirection;
 
+        // Input Actions
+        private InputAction _moveAction;
+        private InputAction _jumpAction;
+
         private void Awake()
         {
             _rb = GetComponent<Rigidbody>();
 
-            // Create ground check if it doesn't exist
             if (groundCheck == null)
             {
                 GameObject groundCheckObj = new GameObject("GroundCheck");
@@ -38,6 +37,31 @@ namespace Friendslop
                 groundCheckObj.transform.localPosition = new Vector3(0, -1f, 0);
                 groundCheck = groundCheckObj.transform;
             }
+
+            // Setup Input Actions
+            _moveAction = new InputAction("Move", InputActionType.Value, "<Gamepad>/leftStick");
+            _moveAction.AddCompositeBinding("2DVector")
+                .With("Up", "<Keyboard>/w")
+                .With("Down", "<Keyboard>/s")
+                .With("Left", "<Keyboard>/a")
+                .With("Right", "<Keyboard>/d");
+
+            _jumpAction = new InputAction("Jump", InputActionType.Button, "<Keyboard>/space");
+            _jumpAction.AddBinding("<Gamepad>/buttonSouth");
+        }
+
+        private void OnEnable()
+        {
+            _moveAction.Enable();
+            _jumpAction.Enable();
+            _jumpAction.performed += OnJump;
+        }
+
+        private void OnDisable()
+        {
+            _moveAction.Disable();
+            _jumpAction.Disable();
+            _jumpAction.performed -= OnJump;
         }
 
         private void Update()
@@ -53,15 +77,13 @@ namespace Friendslop
 
         private void HandleInput()
         {
-            // Using legacy input system for compatibility
-            // Can be replaced with new Input System
-            float horizontal = Input.GetAxisRaw("Horizontal");
-            float vertical = Input.GetAxisRaw("Vertical");
+            Vector2 input = _moveAction.ReadValue<Vector2>();
+            _moveDirection = new Vector3(input.x, 0f, input.y).normalized;
+        }
 
-            _moveDirection = new Vector3(horizontal, 0f, vertical).normalized;
-
-            // Jump
-            if (Input.GetButtonDown("Jump") && _isGrounded)
+        private void OnJump(InputAction.CallbackContext context)
+        {
+            if (_isGrounded)
             {
                 Jump();
             }
@@ -76,15 +98,13 @@ namespace Friendslop
         {
             if (_moveDirection.magnitude >= 0.1f)
             {
-                // Move the player
                 Vector3 moveVelocity = _moveDirection * moveSpeed;
                 _rb.linearVelocity = new Vector3(moveVelocity.x, _rb.linearVelocity.y, moveVelocity.z);
 
-                // Rotate player to face movement direction
                 Quaternion targetRotation = Quaternion.LookRotation(_moveDirection);
                 transform.rotation = Quaternion.RotateTowards(
-                    transform.rotation, 
-                    targetRotation, 
+                    transform.rotation,
+                    targetRotation,
                     rotationSpeed * Time.fixedDeltaTime
                 );
             }
@@ -95,7 +115,6 @@ namespace Friendslop
             _rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         }
 
-        // Visualize ground check in editor
         private void OnDrawGizmosSelected()
         {
             if (groundCheck != null)
