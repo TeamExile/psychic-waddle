@@ -9,10 +9,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: game-ci/unity-request-activation-file@vf
+      - uses: game-ci/unity-request-activation-file@v4
         id: getManualLicenseFile
 
-      - uses: actions/upload-artifact@vf
+      - uses: actions/upload-artifact@v4
         with:
           name: Manual Activation File
           path: ${{ steps.getManualLicenseFile.outputs.filePath }}
