@@ -87,7 +87,7 @@ UI for multiplayer lobby and connection management.
 ### 1. Package Requirements
 Add to `Packages/manifest.json`:
 ```json
-"com.unity.netcode.gameobjects": "2.2.1"
+"com.unity.netcode.gameobjects": "1.9.1"
 ```
 
 ### 2. Scene Setup
