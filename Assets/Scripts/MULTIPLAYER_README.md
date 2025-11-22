@@ -98,11 +98,12 @@ Add to `Packages/manifest.json`:
 3. Configure NetworkManager:
    - Set Transport to `UnityTransport`
    - Configure connection settings (default: localhost, port 7777)
+   - **IMPORTANT**: Do NOT add player prefab to NetworkManager - MultiplayerManager handles spawning
 
 #### Create MultiplayerManager GameObject
 1. Create empty GameObject named "MultiplayerManager"
 2. Add `MultiplayerManager` component
-3. Assign player prefab (see below)
+3. Assign player prefab to MultiplayerManager (NOT to NetworkManager)
 4. Configure spawn points or let it auto-generate
 
 #### Create Player Prefab
@@ -115,7 +116,7 @@ Add to `Packages/manifest.json`:
 2. Add Gun as child GameObject
 3. Configure NetworkPlayer settings
 4. Save as prefab in Assets/Prefabs/
-5. Assign to NetworkManager's player prefab list
+5. **Assign to MultiplayerManager's player prefab field** (NOT NetworkManager)
 
 #### Setup UI
 1. Create Canvas with MultiplayerUIManager
@@ -129,8 +130,14 @@ Add to `Packages/manifest.json`:
 
 #### NetworkManager Settings
 - **Transport**: UnityTransport
-- **Player Prefabs**: Add NetworkPlayer prefab
+- **Player Prefabs**: Leave empty - MultiplayerManager handles spawning
 - **Network Prefabs**: Add any networkable prefabs (projectiles, effects, etc.)
+- **Connection Approval**: Automatically enabled by MultiplayerManager to prevent duplicate spawns
+
+#### MultiplayerManager Settings
+- **Player Prefab**: Assign your NetworkPlayer prefab here
+- **Max Players**: Default 4 (configurable)
+- **Spawn Points**: Optional - will auto-generate if not provided
 
 #### Transport Settings (UnityTransport)
 - **Protocol Type**: UDP (default)
@@ -217,10 +224,16 @@ Add to `Packages/manifest.json`:
 
 ### Common Issues
 
+**Duplicate players spawning (two players at launch):**
+- **Solution**: Do NOT add player prefab to NetworkManager's player prefab list
+- MultiplayerManager handles all player spawning with connection approval
+- Player prefab should only be assigned to MultiplayerManager component
+- Connection approval is automatically enabled to prevent automatic spawning
+
 **Players not spawning:**
 - Ensure player prefab has NetworkObject component
-- Check player prefab is added to NetworkManager
-- Verify spawn points are configured
+- Check player prefab is assigned to MultiplayerManager (NOT NetworkManager)
+- Verify spawn points are configured or auto-generated
 
 **Connection failed:**
 - Check firewall settings

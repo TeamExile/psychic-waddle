@@ -7,6 +7,9 @@ namespace Friendslop
     /// <summary>
     /// Manages multiplayer functionality including hosting, joining, and player spawning.
     /// Supports up to 4 players with basic player identification.
+    /// 
+    /// IMPORTANT: This manager handles all player spawning manually using connection approval.
+    /// Do NOT add player prefabs to NetworkManager - assign them to this component instead.
     /// </summary>
     public class MultiplayerManager : NetworkBehaviour
     {
@@ -60,7 +63,27 @@ namespace Friendslop
             {
                 NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
                 NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+                
+                // Disable automatic player spawning - we handle it manually
+                NetworkManager.Singleton.ConnectionApprovalCallback = ApprovalCheck;
             }
+        }
+
+        private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
+        {
+            // Check if we have room for more players
+            if (_connectedPlayers.Count >= maxPlayers)
+            {
+                response.Approved = false;
+                response.Reason = "Server is full";
+                Debug.LogWarning($"Connection denied: Max players ({maxPlayers}) reached.");
+                return;
+            }
+
+            response.Approved = true;
+            response.CreatePlayerObject = false; // We'll spawn the player manually
+            response.Position = null;
+            response.Rotation = null;
         }
 
         private void OnDestroy()
@@ -136,11 +159,17 @@ namespace Friendslop
             // Only server spawns players
             if (IsServer)
             {
+                // Check if player already exists for this client
+                if (_connectedPlayers.ContainsKey(clientId))
+                {
+                    Debug.LogWarning($"Player already exists for client {clientId}");
+                    return;
+                }
+
                 // Check if we've reached max players
                 if (_connectedPlayers.Count >= maxPlayers)
                 {
                     Debug.LogWarning($"Max players ({maxPlayers}) reached. Client {clientId} cannot join.");
-                    // Could disconnect the client here if needed
                     return;
                 }
 
