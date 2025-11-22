@@ -1,12 +1,9 @@
 using UnityEngine;
 using Unity.Netcode;
+using UnityEngine.InputSystem; // Import the new Input System
 
 namespace Friendslop
 {
-    /// <summary>
-    /// Network-enabled player controller that extends PlayerController functionality.
-    /// Synchronizes player movement and actions across the network.
-    /// </summary>
     [RequireComponent(typeof(NetworkObject))]
     [RequireComponent(typeof(Rigidbody))]
     public class NetworkPlayer : NetworkBehaviour
@@ -15,6 +12,8 @@ namespace Friendslop
         [SerializeField] private float moveSpeed = 5f;
         [SerializeField] private float jumpForce = 10f;
         [SerializeField] private float rotationSpeed = 720f;
+        [SerializeField] private float acceleration = 20f;
+        [SerializeField] private float damping = 10f;
 
         [Header("Ground Check")]
         [SerializeField] private Transform groundCheck;
@@ -25,9 +24,11 @@ namespace Friendslop
         [SerializeField] private Gun gun;
 
         [Header("Player Info")]
-        [SerializeField] private Material[] playerMaterials; // Different colors for different players
+        [SerializeField] private Material[] playerMaterials;
 
-        // Network variables for synchronization
+        [Header("Camera")]
+        [SerializeField] private GameObject playerCameraPrefab; // Assign a camera prefab in the inspector
+
         private NetworkVariable<ulong> playerId = new NetworkVariable<ulong>(ulong.MaxValue);
         private NetworkVariable<Vector3> networkPosition = new NetworkVariable<Vector3>();
         private NetworkVariable<Quaternion> networkRotation = new NetworkVariable<Quaternion>();
@@ -36,13 +37,18 @@ namespace Friendslop
         private bool _isGrounded;
         private Vector3 _moveDirection;
         private Renderer _renderer;
+        private Camera _playerCamera;
+
+        // Input Actions
+        private InputAction _moveAction;
+        private InputAction _jumpAction;
+        private InputAction _shootAction;
 
         private void Awake()
         {
             _rb = GetComponent<Rigidbody>();
             _renderer = GetComponentInChildren<Renderer>();
 
-            // Create ground check if it doesn't exist
             if (groundCheck == null)
             {
                 GameObject groundCheckObj = new GameObject("GroundCheck");
@@ -51,7 +57,6 @@ namespace Friendslop
                 groundCheck = groundCheckObj.transform;
             }
 
-            // Setup gun if not assigned
             if (gun == null)
             {
                 gun = GetComponentInChildren<Gun>();
@@ -63,6 +68,41 @@ namespace Friendslop
                     gun = gunObj.AddComponent<Gun>();
                 }
             }
+
+            // Setup Input Actions
+            _moveAction = new InputAction("Move", InputActionType.Value, "<Gamepad>/leftStick");
+            _moveAction.AddCompositeBinding("2DVector")
+                .With("Up", "<Keyboard>/w")
+                .With("Down", "<Keyboard>/s")
+                .With("Left", "<Keyboard>/a")
+                .With("Right", "<Keyboard>/d");
+
+            _jumpAction = new InputAction("Jump", InputActionType.Button, "<Keyboard>/space");
+            _jumpAction.AddBinding("<Gamepad>/buttonSouth");
+
+            _shootAction = new InputAction("Shoot", InputActionType.Button, "<Mouse>/leftButton");
+            _shootAction.AddBinding("<Keyboard>/leftCtrl");
+            _shootAction.AddBinding("<Gamepad>/rightTrigger");
+        }
+
+        private void OnEnable()
+        {
+            _moveAction.Enable();
+            _jumpAction.Enable();
+            _shootAction.Enable();
+
+            _jumpAction.performed += OnJump;
+            _shootAction.performed += OnShoot;
+        }
+
+        private void OnDisable()
+        {
+            _moveAction.Disable();
+            _jumpAction.Disable();
+            _shootAction.Disable();
+
+            _jumpAction.performed -= OnJump;
+            _shootAction.performed -= OnShoot;
         }
 
         public override void OnNetworkSpawn()
@@ -71,11 +111,9 @@ namespace Friendslop
 
             if (IsOwner)
             {
-                // Set player ID for this client
                 RequestPlayerIdServerRpc();
             }
 
-            // Apply player material based on player ID
             playerId.OnValueChanged += OnPlayerIdChanged;
             if (playerId.Value != ulong.MaxValue)
             {
@@ -100,7 +138,6 @@ namespace Friendslop
             }
             else
             {
-                // Interpolate non-owner players to their network positions
                 transform.position = Vector3.Lerp(transform.position, networkPosition.Value, Time.deltaTime * 10f);
                 transform.rotation = Quaternion.Lerp(transform.rotation, networkRotation.Value, Time.deltaTime * 10f);
             }
@@ -111,33 +148,29 @@ namespace Friendslop
             if (IsOwner)
             {
                 Move();
-                
-                // Update network variables
                 UpdatePositionServerRpc(transform.position, transform.rotation);
             }
         }
 
         private void HandleInput()
         {
-            // Movement input
-            float horizontal = Input.GetAxisRaw("Horizontal");
-            float vertical = Input.GetAxisRaw("Vertical");
-            _moveDirection = new Vector3(horizontal, 0f, vertical).normalized;
+            Vector2 input = _moveAction.ReadValue<Vector2>();
+            _moveDirection = new Vector3(input.x, 0f, input.y).normalized;
+        }
 
-            // Jump input
-            if (Input.GetButtonDown("Jump") && _isGrounded)
+        private void OnJump(InputAction.CallbackContext context)
+        {
+            if (_isGrounded)
             {
                 Jump();
             }
+        }
 
-            // Shooting input
-            if (Input.GetButtonDown("Fire1") || Input.GetMouseButtonDown(0))
+        private void OnShoot(InputAction.CallbackContext context)
+        {
+            if (gun != null && gun.TryShoot())
             {
-                if (gun != null && gun.TryShoot())
-                {
-                    // Notify server about shooting
-                    ShootServerRpc();
-                }
+                ShootServerRpc();
             }
         }
 
@@ -146,14 +179,23 @@ namespace Friendslop
             _isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
         }
 
+        // Replace your Move() method with this:
         private void Move()
         {
+            // Calculate desired velocity based on input
+            Vector3 desiredVelocity = _moveDirection * moveSpeed;
+
+            // Get current velocity (ignore vertical for movement)
+            Vector3 currentVelocity = _rb.linearVelocity;
+            Vector3 velocityChange = desiredVelocity - new Vector3(currentVelocity.x, 0f, currentVelocity.z);
+
+            // Apply acceleration and damping for smooth movement
+            Vector3 force = velocityChange * acceleration - new Vector3(currentVelocity.x, 0f, currentVelocity.z) * damping;
+            _rb.AddForce(force, ForceMode.Acceleration);
+
+            // Smoothly rotate player to face movement direction
             if (_moveDirection.magnitude >= 0.1f)
             {
-                Vector3 moveVelocity = _moveDirection * moveSpeed;
-                // Note: linearVelocity is Unity 6+ property (replaces velocity)
-                _rb.linearVelocity = new Vector3(moveVelocity.x, _rb.linearVelocity.y, moveVelocity.z);
-
                 Quaternion targetRotation = Quaternion.LookRotation(_moveDirection);
                 transform.rotation = Quaternion.RotateTowards(
                     transform.rotation,
@@ -182,11 +224,9 @@ namespace Friendslop
             ApplyPlayerMaterial((int)(newValue % int.MaxValue));
         }
 
-        // Network RPCs
         [ServerRpc]
         private void RequestPlayerIdServerRpc(ServerRpcParams rpcParams = default)
         {
-            // Assign player ID based on client ID (using ulong to avoid data loss)
             playerId.Value = rpcParams.Receive.SenderClientId;
         }
 
@@ -200,21 +240,18 @@ namespace Friendslop
         [ServerRpc]
         private void ShootServerRpc()
         {
-            // Server authoritative shooting - notify all clients
             ShootClientRpc();
         }
 
         [ClientRpc]
         private void ShootClientRpc()
         {
-            // Only execute for non-owners (owner already shot locally)
             if (!IsOwner && gun != null)
             {
                 gun.TryShoot();
             }
         }
 
-        // Visualize ground check in editor
         private void OnDrawGizmosSelected()
         {
             if (groundCheck != null)
@@ -224,7 +261,6 @@ namespace Friendslop
             }
         }
 
-        // Public properties
         public ulong PlayerId => playerId.Value;
     }
 }
