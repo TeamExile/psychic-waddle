@@ -16,7 +16,9 @@ namespace Friendslop
         [Header("Visual Effects")]
         [SerializeField] private Transform muzzlePoint;
         [SerializeField] private GameObject muzzleFlashPrefab;
+        [SerializeField] private float muzzleFlashDuration = 0.1f;
         [SerializeField] private GameObject bulletHitEffectPrefab;
+        [SerializeField] private float bulletHitEffectDuration = 1f;
         
         [Header("Audio")]
         [SerializeField] private AudioClip gunShotSound;
@@ -69,7 +71,7 @@ namespace Friendslop
             if (muzzleFlashPrefab != null && muzzlePoint != null)
             {
                 GameObject flash = Instantiate(muzzleFlashPrefab, muzzlePoint.position, muzzlePoint.rotation);
-                Destroy(flash, 0.1f);
+                Destroy(flash, muzzleFlashDuration);
             }
             
             // Perform raycast to detect hits
@@ -84,7 +86,7 @@ namespace Friendslop
                 if (bulletHitEffectPrefab != null)
                 {
                     GameObject hitEffect = Instantiate(bulletHitEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
-                    Destroy(hitEffect, 1f);
+                    Destroy(hitEffect, bulletHitEffectDuration);
                 }
                 
                 // Deal damage if the hit object has a health component

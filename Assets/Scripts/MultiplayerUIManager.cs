@@ -11,6 +11,8 @@ namespace Friendslop.UI
     /// </summary>
     public class MultiplayerUIManager : MonoBehaviour
     {
+        private const int DEFAULT_MAX_PLAYERS = 4;
+
         [Header("Lobby UI")]
         [SerializeField] private GameObject lobbyPanel;
         [SerializeField] private Button hostButton;
@@ -140,7 +142,7 @@ namespace Friendslop.UI
             if (playerCountText != null)
             {
                 int playerCount = count ?? (MultiplayerManager.Instance?.ConnectedPlayerCount ?? 0);
-                int maxPlayers = MultiplayerManager.Instance?.MaxPlayers ?? 4;
+                int maxPlayers = MultiplayerManager.Instance?.MaxPlayers ?? DEFAULT_MAX_PLAYERS;
                 playerCountText.text = $"Players: {playerCount}/{maxPlayers}";
             }
         }

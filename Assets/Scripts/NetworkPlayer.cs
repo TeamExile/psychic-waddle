@@ -28,7 +28,7 @@ namespace Friendslop
         [SerializeField] private Material[] playerMaterials; // Different colors for different players
 
         // Network variables for synchronization
-        private NetworkVariable<int> playerId = new NetworkVariable<int>(-1);
+        private NetworkVariable<ulong> playerId = new NetworkVariable<ulong>(ulong.MaxValue);
         private NetworkVariable<Vector3> networkPosition = new NetworkVariable<Vector3>();
         private NetworkVariable<Quaternion> networkRotation = new NetworkVariable<Quaternion>();
 
@@ -77,9 +77,9 @@ namespace Friendslop
 
             // Apply player material based on player ID
             playerId.OnValueChanged += OnPlayerIdChanged;
-            if (playerId.Value >= 0)
+            if (playerId.Value != ulong.MaxValue)
             {
-                ApplyPlayerMaterial(playerId.Value);
+                ApplyPlayerMaterial((int)(playerId.Value % int.MaxValue));
             }
 
             Debug.Log($"NetworkPlayer spawned. IsOwner: {IsOwner}, IsServer: {IsServer}, PlayerId: {playerId.Value}");
@@ -151,6 +151,7 @@ namespace Friendslop
             if (_moveDirection.magnitude >= 0.1f)
             {
                 Vector3 moveVelocity = _moveDirection * moveSpeed;
+                // Note: linearVelocity is Unity 6+ property (replaces velocity)
                 _rb.linearVelocity = new Vector3(moveVelocity.x, _rb.linearVelocity.y, moveVelocity.z);
 
                 Quaternion targetRotation = Quaternion.LookRotation(_moveDirection);
@@ -176,17 +177,17 @@ namespace Friendslop
             }
         }
 
-        private void OnPlayerIdChanged(int oldValue, int newValue)
+        private void OnPlayerIdChanged(ulong oldValue, ulong newValue)
         {
-            ApplyPlayerMaterial(newValue);
+            ApplyPlayerMaterial((int)(newValue % int.MaxValue));
         }
 
         // Network RPCs
         [ServerRpc]
         private void RequestPlayerIdServerRpc(ServerRpcParams rpcParams = default)
         {
-            // Assign player ID based on client ID
-            playerId.Value = (int)rpcParams.Receive.SenderClientId;
+            // Assign player ID based on client ID (using ulong to avoid data loss)
+            playerId.Value = rpcParams.Receive.SenderClientId;
         }
 
         [ServerRpc]
@@ -224,6 +225,6 @@ namespace Friendslop
         }
 
         // Public properties
-        public int PlayerId => playerId.Value;
+        public ulong PlayerId => playerId.Value;
     }
 }
