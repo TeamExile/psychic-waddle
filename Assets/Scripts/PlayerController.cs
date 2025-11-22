@@ -9,6 +9,9 @@ namespace Friendslop
     [RequireComponent(typeof(Rigidbody))]
     public class PlayerController : MonoBehaviour
     {
+        // Default layer mask for ground detection
+        private const int DEFAULT_GROUND_LAYER = 1;
+        
         [Header("Movement Settings")]
         [SerializeField] private float moveSpeed = 5f;
         [SerializeField] private float jumpForce = 10f;
@@ -17,7 +20,7 @@ namespace Friendslop
         [Header("Ground Check")]
         [SerializeField] private Transform groundCheck;
         [SerializeField] private float groundDistance = 0.4f;
-        [SerializeField] private LayerMask groundMask = 1; // Default layer
+        [SerializeField] private LayerMask groundMask = DEFAULT_GROUND_LAYER;
         
         private Rigidbody _rb;
         private bool _isGrounded;
