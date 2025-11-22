@@ -19,6 +19,12 @@ namespace Friendslop.UI
                 if (_instance == null)
                 {
                     _instance = FindObjectOfType<UIManager>();
+                    
+                    if (_instance == null)
+                    {
+                        GameObject go = new GameObject("UIManager");
+                        _instance = go.AddComponent<UIManager>();
+                    }
                 }
                 return _instance;
             }

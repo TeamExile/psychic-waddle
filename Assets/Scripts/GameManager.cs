@@ -81,6 +81,7 @@ namespace Friendslop
         public void EndGame()
         {
             _currentState = GameState.GameOver;
+            Time.timeScale = 1f; // Reset time scale in case game was paused
             Debug.Log("Game Over");
         }
 

@@ -17,7 +17,7 @@ namespace Friendslop
         [Header("Ground Check")]
         [SerializeField] private Transform groundCheck;
         [SerializeField] private float groundDistance = 0.4f;
-        [SerializeField] private LayerMask groundMask;
+        [SerializeField] private LayerMask groundMask = 1; // Default layer
         
         private Rigidbody _rb;
         private bool _isGrounded;
