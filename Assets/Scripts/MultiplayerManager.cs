@@ -21,7 +21,7 @@ namespace Friendslop
             {
                 if (_instance == null)
                 {
-                    _instance = FindObjectOfType<MultiplayerManager>();
+                    _instance = FindAnyObjectByType<MultiplayerManager>();
                 }
                 return _instance;
             }
@@ -86,7 +86,7 @@ namespace Friendslop
             response.Rotation = null;
         }
 
-        private void OnDestroy()
+        public override void OnDestroy()
         {
             if (NetworkManager.Singleton != null)
             {

@@ -16,7 +16,7 @@ namespace Friendslop
             {
                 if (_instance == null)
                 {
-                    _instance = FindObjectOfType<GameManager>();
+                    _instance = FindAnyObjectByType<GameManager>();
 
                     if (_instance == null)
                     {

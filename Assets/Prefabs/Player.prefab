@@ -157,6 +157,7 @@ GameObject:
   - component: {fileID: 5489989974186418914}
   - component: {fileID: 3739413341062825516}
   - component: {fileID: 8373688897059978800}
+  - component: {fileID: 4382834330801742982}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -323,20 +324,55 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Friendslop.NetworkPlayer
   ShowTopMostFoldoutHeaderGroup: 1
-  moveSpeed: 5
-  jumpForce: 10
-  rotationSpeed: 720
-  acceleration: 50
-  damping: 10
-  groundCheck: {fileID: 5464931712705559846}
-  groundDistance: 0.4
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 9
-  gun: {fileID: 0}
   playerMaterials:
   - {fileID: 2100000, guid: a52beed3b1dc1cb4586a20a0889ca3c4, type: 2}
   - {fileID: 2100000, guid: 32e83e60de2c7f84f9c5f34679e42895, type: 2}
   - {fileID: 2100000, guid: c5d125486ab41604f8825018fc47a596, type: 2}
   - {fileID: 2100000, guid: 9ec0213a7d5557d4da0956ff4e3bcdf5, type: 2}
-  playerCameraPrefab: {fileID: 7020385529256352870, guid: d72a68ecffccb744591098aac1748cb2, type: 3}
+  _playerCamera: {fileID: 0}
+--- !u!114 &4382834330801742982
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6046600344420062116}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.Components.NetworkTransform
+  ShowTopMostFoldoutHeaderGroup: 1
+  NetworkTransformExpanded: 0
+  AutoOwnerAuthorityTickOffset: 1
+  PositionInterpolationType: 0
+  RotationInterpolationType: 0
+  ScaleInterpolationType: 0
+  PositionLerpSmoothing: 1
+  PositionMaxInterpolationTime: 0.1
+  RotationLerpSmoothing: 1
+  RotationMaxInterpolationTime: 0.1
+  ScaleLerpSmoothing: 1
+  ScaleMaxInterpolationTime: 0.1
+  AuthorityMode: 1
+  TickSyncChildren: 0
+  UseUnreliableDeltas: 0
+  SyncPositionX: 1
+  SyncPositionY: 1
+  SyncPositionZ: 1
+  SyncRotAngleX: 1
+  SyncRotAngleY: 1
+  SyncRotAngleZ: 1
+  SyncScaleX: 1
+  SyncScaleY: 1
+  SyncScaleZ: 1
+  PositionThreshold: 0.001
+  RotAngleThreshold: 0.01
+  ScaleThreshold: 0.01
+  UseQuaternionSynchronization: 0
+  UseQuaternionCompression: 0
+  UseHalfFloatPrecision: 0
+  InLocalSpace: 0
+  SwitchTransformSpaceWhenParented: 0
+  Interpolate: 1
+  SlerpPosition: 0
