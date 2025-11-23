@@ -13,21 +13,38 @@ namespace Friendslop
         private NetworkVariable<ulong> playerId = new NetworkVariable<ulong>(ulong.MaxValue);
         private Renderer _renderer;
 
+        // reference to movement component
+        private PlayerController _playerController;
+
         private void Awake()
         {
-            Debug.Log($"NetworkPlayer Awake on client {NetworkManager.Singleton.LocalClientId}");
             _renderer = GetComponentInChildren<Renderer>();
+            // cache movement component if present
+            _playerController = GetComponent<PlayerController>();
+            if (_playerController != null)
+            {
+                // default to disabled until ownership is confirmed
+                _playerController.SetControlActive(false);
+            }
         }
 
         #region NetworkSetupMethods
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
-            Debug.Log($"NetworkPlayer OnNetworkSpawn on client {NetworkManager.Singleton.LocalClientId}, IsOwner: {IsOwner}");
+
+            // enable/disable local controls immediately based on ownership
+            if (_playerController != null)
+            {
+                _playerController.SetControlActive(IsOwner);
+            }
+
             if (IsOwner)
             {
+                // owner-specific setup: request id and make camera
                 RequestPlayerIdServerRpc();
-                Debug.Log($"Ownership gained by client {NetworkManager.Singleton.LocalClientId}");
+
+                // ensure camera is created for owner (OnGainedOwnership may not fire reliably on all netcode versions)
                 SetupPlayerCamera();
             }
 
@@ -36,25 +53,52 @@ namespace Friendslop
             {
                 ApplyPlayerMaterial((int)(playerId.Value % int.MaxValue));
             }
+
+            Debug.Log($"NetworkPlayer OnNetworkSpawn. LocalClientId: {NetworkManager.Singleton.LocalClientId}, IsOwner: {IsOwner}");
         }
 
-        //public override void OnGainedOwnership()
-        //{
-        //    base.OnGainedOwnership();
-        //    Debug.Log($"Ownership gained by client {NetworkManager.Singleton.LocalClientId}");
-        //    SetupPlayerCamera();
-        //}
+        public override void OnGainedOwnership()
+        {
+            base.OnGainedOwnership();
+            Debug.Log($"Ownership gained by client {NetworkManager.Singleton.LocalClientId}");
+
+            // double-safety: enable controls and camera when ownership is gained
+            if (_playerController != null)
+            {
+                _playerController.SetControlActive(true);
+            }
+
+            SetupPlayerCamera();
+        }
 
         public override void OnNetworkDespawn()
         {
             base.OnNetworkDespawn();
+
+            // disable controls on despawn
+            if (_playerController != null)
+            {
+                _playerController.SetControlActive(false);
+            }
+
+            // remove handler
             playerId.OnValueChanged -= OnPlayerIdChanged;
+
+            // destroy local camera instance (only the owner created it)
+            if (_playerCamera != null)
+            {
+                Destroy(_playerCamera.gameObject);
+                _playerCamera = null;
+            }
         }
         #endregion
 
         #region PlayerSetupMethods
         private void SetupPlayerCamera()
         {
+            // If camera already exists (reconnect scenarios) don't create another
+            if (_playerCamera != null) return;
+
             // Destroy any existing main camera (optional, for single-player scenes)
             Camera mainCam = Camera.main;
             if (mainCam != null && mainCam.gameObject != null)
@@ -66,9 +110,10 @@ namespace Friendslop
             GameObject camObj = new GameObject("PlayerCamera");
             _playerCamera = camObj.AddComponent<Camera>();
             camObj.transform.SetParent(transform);
-            camObj.transform.localPosition = new Vector3(0, 1.6f, 0); // Adjust for FPS or 3rd person
+            camObj.transform.localPosition = new Vector3(0, 0.8f, 0.6f); // Adjust for FPS or 3rd person
             camObj.transform.localRotation = Quaternion.identity;
             _playerCamera.tag = "MainCamera";
+            _playerController.SetCamera(_playerCamera);
         }
 
         private void ApplyPlayerMaterial(int id)
