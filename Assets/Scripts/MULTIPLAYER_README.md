@@ -200,11 +200,31 @@ Add to `Packages/manifest.json`:
 - Player materials can be customized per player
 - Player ID displayed in UI
 
+### Environmental Hazards (Biome 01)
+Environmental hazards are network-synchronized objects that can damage players.
+
+**Hazard Types:**
+1. **Crystal Spike Hazard** - Periodically erupts from the ground
+   - Cycles through Dormant → Warning → Erupting → Active states
+   - Damages players in range during Active state
+   - Visual feedback with color changes and scale animation
+   
+2. **Toxic Mist Zone** - Continuous damage-over-time area
+   - Damages players while they remain inside the zone
+   - Pulsing visual effect
+   - Players take damage at configurable intervals
+
+**Hazard Features:**
+- All hazard states synced across clients via NetworkVariables
+- Server authoritative - only server applies damage
+- Debug visuals with Gizmos for editor visualization
+- Configurable damage, intervals, and visual settings
+
 ## Future Enhancements
 
 ### Planned Features
-- [ ] Player health system
-- [ ] Damage synchronization
+- [x] Player health system
+- [x] Damage synchronization
 - [ ] Different weapon types
 - [ ] Power-ups
 - [ ] Score tracking and leaderboard
