@@ -6,6 +6,7 @@ namespace Friendslop
 {
     [RequireComponent(typeof(NetworkObject))]
     [RequireComponent(typeof(Rigidbody))]
+    [RequireComponent(typeof(PlayerHealth))]
     public class NetworkPlayer : NetworkBehaviour
     {
         [Header("Movement Settings")]
