@@ -179,19 +179,19 @@ namespace Friendslop.Hazards
 
         private void UpdateSpikeVisuals()
         {
-            if (_renderer == null) return;
+            if (_material == null) return;
 
             switch (_spikeState.Value)
             {
                 case SpikeState.Dormant:
-                    _renderer.material.color = dormantColor;
+                    _material.color = dormantColor;
                     break;
                 case SpikeState.Warning:
-                    _renderer.material.color = warningColor;
+                    _material.color = warningColor;
                     break;
                 case SpikeState.Erupting:
                 case SpikeState.Active:
-                    _renderer.material.color = eruptedColor;
+                    _material.color = eruptedColor;
                     break;
             }
         }

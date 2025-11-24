@@ -26,6 +26,7 @@ namespace Friendslop
 
         private float _lastDamageTime;
         private Renderer _renderer;
+        private Material _material;
         private Color _originalColor;
         private float _flashTimer;
 
@@ -42,7 +43,9 @@ namespace Friendslop
             _renderer = GetComponentInChildren<Renderer>();
             if (_renderer != null)
             {
-                _originalColor = _renderer.material.color;
+                // Cache the material to avoid creating new instances
+                _material = _renderer.material;
+                _originalColor = _material.color;
             }
         }
 
@@ -72,9 +75,9 @@ namespace Friendslop
             if (_flashTimer > 0)
             {
                 _flashTimer -= Time.deltaTime;
-                if (_flashTimer <= 0 && _renderer != null)
+                if (_flashTimer <= 0 && _material != null)
                 {
-                    _renderer.material.color = _originalColor;
+                    _material.color = _originalColor;
                 }
             }
         }
@@ -161,9 +164,9 @@ namespace Friendslop
         private void TakeDamageClientRpc()
         {
             // Flash damage color
-            if (_renderer != null)
+            if (_material != null)
             {
-                _renderer.material.color = damageFlashColor;
+                _material.color = damageFlashColor;
                 _flashTimer = damageFlashDuration;
             }
 

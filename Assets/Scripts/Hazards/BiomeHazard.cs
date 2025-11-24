@@ -26,6 +26,7 @@ namespace Friendslop.Hazards
         );
 
         protected Renderer _renderer;
+        protected Material _material;
         protected Color _originalColor;
 
         public bool IsHazardActive => _networkIsActive.Value;
@@ -40,7 +41,9 @@ namespace Friendslop.Hazards
 
             if (_renderer != null)
             {
-                _originalColor = _renderer.material.color;
+                // Cache the material to avoid creating new instances
+                _material = _renderer.material;
+                _originalColor = _material.color;
             }
         }
 
@@ -75,9 +78,9 @@ namespace Friendslop.Hazards
         /// </summary>
         protected virtual void UpdateVisuals()
         {
-            if (_renderer != null)
+            if (_material != null)
             {
-                _renderer.material.color = _networkIsActive.Value ? activeColor : inactiveColor;
+                _material.color = _networkIsActive.Value ? activeColor : inactiveColor;
             }
         }
 

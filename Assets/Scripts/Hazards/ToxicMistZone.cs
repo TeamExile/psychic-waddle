@@ -86,7 +86,14 @@ namespace Friendslop.Hazards
             {
                 PlayerHealth playerHealth = kvp.Key;
 
-                if (playerHealth == null || !IsPlayerInZone(playerHealth.transform.position))
+                // Check for null first before accessing transform
+                if (playerHealth == null)
+                {
+                    playersToRemove.Add(playerHealth);
+                    continue;
+                }
+
+                if (!IsPlayerInZone(playerHealth.transform.position))
                 {
                     playersToRemove.Add(playerHealth);
                     continue;
@@ -159,7 +166,7 @@ namespace Friendslop.Hazards
 
         private void AnimateMist()
         {
-            if (_renderer == null) return;
+            if (_material == null) return;
 
             // Pulsing color effect
             float pulse = (Mathf.Sin(Time.time * pulseSpeed) + 1f) / 2f;
@@ -170,7 +177,7 @@ namespace Friendslop.Hazards
                 currentColor = inactiveColor;
             }
 
-            _renderer.material.color = currentColor;
+            _material.color = currentColor;
 
             // Subtle scale pulsing
             float scalePulse = 1f + Mathf.Sin(Time.time * pulseSpeed * 0.5f) * 0.05f;
