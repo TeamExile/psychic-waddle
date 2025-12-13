@@ -18,7 +18,7 @@ namespace Friendslop.UI
             {
                 if (_instance == null)
                 {
-                    _instance = FindObjectOfType<UIManager>();
+                    _instance = FindAnyObjectByType<UIManager>();
 
                     if (_instance == null)
                     {

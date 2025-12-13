@@ -1,117 +1,82 @@
-using UnityEngine;
+    using UnityEngine;
 using Unity.Netcode;
-using UnityEngine.InputSystem; // Import the new Input System
 
 namespace Friendslop
 {
     [RequireComponent(typeof(NetworkObject))]
-    [RequireComponent(typeof(Rigidbody))]
+    [RequireComponent(typeof(PlayerHealth))]
     public class NetworkPlayer : NetworkBehaviour
     {
-        [Header("Movement Settings")]
-        [SerializeField] private float moveSpeed = 5f;
-        [SerializeField] private float jumpForce = 10f;
-        [SerializeField] private float rotationSpeed = 720f;
-        [SerializeField] private float acceleration = 20f;
-        [SerializeField] private float damping = 10f;
-
-        [Header("Ground Check")]
-        [SerializeField] private Transform groundCheck;
-        [SerializeField] private float groundDistance = 0.4f;
-        [SerializeField] private LayerMask groundMask = 1;
-
-        [Header("Shooting")]
-        [SerializeField] private Gun gun;
-
         [Header("Player Info")]
         [SerializeField] private Material[] playerMaterials;
-
-        [Header("Camera")]
-        [SerializeField] private GameObject playerCameraPrefab; // Assign a camera prefab in the inspector
+        [SerializeField] private Camera _playerCamera;
 
         private NetworkVariable<ulong> playerId = new NetworkVariable<ulong>(ulong.MaxValue);
-        private NetworkVariable<Vector3> networkPosition = new NetworkVariable<Vector3>();
-        private NetworkVariable<Quaternion> networkRotation = new NetworkVariable<Quaternion>();
-
-        private Rigidbody _rb;
-        private bool _isGrounded;
-        private Vector3 _moveDirection;
         private Renderer _renderer;
-        private Camera _playerCamera;
 
-        // Input Actions
-        private InputAction _moveAction;
-        private InputAction _jumpAction;
-        private InputAction _shootAction;
+        // reference to movement component
+        private PlayerController _playerController;
+
+        // track whether this instance created the camera so we only destroy cameras we created
+        private bool _createdLocalCamera;
 
         private void Awake()
         {
-            _rb = GetComponent<Rigidbody>();
             _renderer = GetComponentInChildren<Renderer>();
-
-            if (groundCheck == null)
+            // cache movement component if present
+            _playerController = GetComponent<PlayerController>();
+            if (_playerController != null)
             {
-                GameObject groundCheckObj = new GameObject("GroundCheck");
-                groundCheckObj.transform.SetParent(transform);
-                groundCheckObj.transform.localPosition = new Vector3(0, -1f, 0);
-                groundCheck = groundCheckObj.transform;
+                // default to disabled until ownership is confirmed
+                _playerController.SetControlActive(false);
             }
-
-            if (gun == null)
-            {
-                gun = GetComponentInChildren<Gun>();
-                if (gun == null)
-                {
-                    GameObject gunObj = new GameObject("Gun");
-                    gunObj.transform.SetParent(transform);
-                    gunObj.transform.localPosition = new Vector3(0.5f, 0.5f, 0.5f);
-                    gun = gunObj.AddComponent<Gun>();
-                }
-            }
-
-            // Setup Input Actions
-            _moveAction = new InputAction("Move", InputActionType.Value, "<Gamepad>/leftStick");
-            _moveAction.AddCompositeBinding("2DVector")
-                .With("Up", "<Keyboard>/w")
-                .With("Down", "<Keyboard>/s")
-                .With("Left", "<Keyboard>/a")
-                .With("Right", "<Keyboard>/d");
-
-            _jumpAction = new InputAction("Jump", InputActionType.Button, "<Keyboard>/space");
-            _jumpAction.AddBinding("<Gamepad>/buttonSouth");
-
-            _shootAction = new InputAction("Shoot", InputActionType.Button, "<Mouse>/leftButton");
-            _shootAction.AddBinding("<Keyboard>/leftCtrl");
-            _shootAction.AddBinding("<Gamepad>/rightTrigger");
         }
 
-        private void OnEnable()
-        {
-            _moveAction.Enable();
-            _jumpAction.Enable();
-            _shootAction.Enable();
-
-            _jumpAction.performed += OnJump;
-            _shootAction.performed += OnShoot;
-        }
-
-        private void OnDisable()
-        {
-            _moveAction.Disable();
-            _jumpAction.Disable();
-            _shootAction.Disable();
-
-            _jumpAction.performed -= OnJump;
-            _shootAction.performed -= OnShoot;
-        }
-
+        #region NetworkSetupMethods
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
 
+            // enable/disable local controls immediately based on ownership
+            if (_playerController != null)
+            {
+                _playerController.SetControlActive(IsOwner);
+            }
+
+            // If the prefab contains a Camera as a child, make sure only the owner enables/uses it.
+            Camera childCam = GetComponentInChildren<Camera>(true);
+            if (childCam != null)
+            {
+                if (IsOwner)
+                {
+                    // Owner should use/enable the camera and register it as this player's camera.
+                    _playerCamera = childCam;
+                    _playerCamera.enabled = true;
+                    _playerController?.SetCamera(_playerCamera);
+                    _createdLocalCamera = false; // camera came from prefab
+                }
+                else
+                {
+                    // Non-owners should NOT have their player cameras enabled locally.
+                    // Disable so it doesn't interfere with the local client's view.
+                    childCam.enabled = false;
+
+                    // If the prefab camera had the MainCamera tag (common mistake), remove it so it
+                    // doesn't change Camera.main for the whole process (host/editor scenarios).
+                    if (childCam.CompareTag("MainCamera"))
+                    {
+                        childCam.tag = "Untagged";
+                    }
+                }
+            }
+
             if (IsOwner)
             {
+                // owner-specific setup: request id and make camera if none found
                 RequestPlayerIdServerRpc();
+
+                // ensure camera is created for owner (OnGainedOwnership may not fire reliably on all netcode versions)
+                SetupPlayerCamera();
             }
 
             playerId.OnValueChanged += OnPlayerIdChanged;
@@ -120,94 +85,93 @@ namespace Friendslop
                 ApplyPlayerMaterial((int)(playerId.Value % int.MaxValue));
             }
 
-            Debug.Log($"NetworkPlayer spawned. IsOwner: {IsOwner}, IsServer: {IsServer}, PlayerId: {playerId.Value}");
+            Debug.Log($"NetworkPlayer OnNetworkSpawn. LocalClientId: {NetworkManager.Singleton.LocalClientId}, IsOwner: {IsOwner}");
+        }
+
+        public override void OnGainedOwnership()
+        {
+            base.OnGainedOwnership();
+            Debug.Log($"Ownership gained by client {NetworkManager.Singleton.LocalClientId}");
+
+            // double-safety: enable controls and camera when ownership is gained
+            if (_playerController != null)
+            {
+                _playerController.SetControlActive(true);
+            }
+
+            // If a prefab camera existed and was disabled on non-owner clients, enable it now.
+            Camera childCam = GetComponentInChildren<Camera>(true);
+            if (childCam != null)
+            {
+                _playerCamera = childCam;
+                _playerCamera.enabled = true;
+                _playerController?.SetCamera(_playerCamera);
+                _createdLocalCamera = false;
+            }
+            else
+            {
+                // otherwise create one
+                SetupPlayerCamera();
+            }
         }
 
         public override void OnNetworkDespawn()
         {
             base.OnNetworkDespawn();
+
+            // disable controls on despawn
+            if (_playerController != null)
+            {
+                _playerController.SetControlActive(false);
+            }
+
+            // remove handler
             playerId.OnValueChanged -= OnPlayerIdChanged;
-        }
 
-        private void Update()
-        {
-            if (IsOwner)
+            // destroy only the camera this instance created (owner only)
+            if (_createdLocalCamera && _playerCamera != null)
             {
-                HandleInput();
-                CheckGround();
+                Destroy(_playerCamera.gameObject);
+                _playerCamera = null;
+                _createdLocalCamera = false;
             }
-            else
+            else if (_playerCamera != null && IsOwner == false)
             {
-                transform.position = Vector3.Lerp(transform.position, networkPosition.Value, Time.deltaTime * 10f);
-                transform.rotation = Quaternion.Lerp(transform.rotation, networkRotation.Value, Time.deltaTime * 10f);
-            }
-        }
-
-        private void FixedUpdate()
-        {
-            if (IsOwner)
-            {
-                Move();
-                UpdatePositionServerRpc(transform.position, transform.rotation);
+                // ensure we don't leave a disabled prefab camera tagged as MainCamera by accident
+                if (_playerCamera.CompareTag("MainCamera"))
+                {
+                    _playerCamera.tag = "Untagged";
+                }
+                _playerCamera = null;
             }
         }
+        #endregion
 
-        private void HandleInput()
+        #region PlayerSetupMethods
+        private void SetupPlayerCamera()
         {
-            Vector2 input = _moveAction.ReadValue<Vector2>();
-            _moveDirection = new Vector3(input.x, 0f, input.y).normalized;
-        }
+            // Only run for the local owner — every client should create/own its own camera.
+            if (!IsOwner) return;
 
-        private void OnJump(InputAction.CallbackContext context)
-        {
-            if (_isGrounded)
-            {
-                Jump();
-            }
-        }
+            // If we already have a cached reference (from prefab or earlier), don't create another
+            if (_playerCamera != null) return;
 
-        private void OnShoot(InputAction.CallbackContext context)
-        {
-            if (gun != null && gun.TryShoot())
-            {
-                ShootServerRpc();
-            }
-        }
+            // Create a new camera and attach it to this player (local owner only)
+            GameObject camObj = new GameObject($"PlayerCamera_{NetworkManager.Singleton.LocalClientId}");
+            _playerCamera = camObj.AddComponent<Camera>();
+            camObj.transform.SetParent(transform);
+            camObj.transform.localPosition = new Vector3(0, 0.8f, 0.6f); // Adjust for FPS or 3rd person
+            camObj.transform.localRotation = Quaternion.identity;
 
-        private void CheckGround()
-        {
-            _isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
-        }
+            // Do not set the "MainCamera" tag here. Camera.main is a global convenience and
+            // will always resolve to the last camera tagged "MainCamera" in the same process.
+            // For local ownership we only need the camera component enabled for this client.
+            _playerCamera.enabled = true;
 
-        // Replace your Move() method with this:
-        private void Move()
-        {
-            // Calculate desired velocity based on input
-            Vector3 desiredVelocity = _moveDirection * moveSpeed;
+            // mark that we created this camera so we can clean it up on despawn
+            _createdLocalCamera = true;
 
-            // Get current velocity (ignore vertical for movement)
-            Vector3 currentVelocity = _rb.linearVelocity;
-            Vector3 velocityChange = desiredVelocity - new Vector3(currentVelocity.x, 0f, currentVelocity.z);
-
-            // Apply acceleration and damping for smooth movement
-            Vector3 force = velocityChange * acceleration - new Vector3(currentVelocity.x, 0f, currentVelocity.z) * damping;
-            _rb.AddForce(force, ForceMode.Acceleration);
-
-            // Smoothly rotate player to face movement direction
-            if (_moveDirection.magnitude >= 0.1f)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(_moveDirection);
-                transform.rotation = Quaternion.RotateTowards(
-                    transform.rotation,
-                    targetRotation,
-                    rotationSpeed * Time.fixedDeltaTime
-                );
-            }
-        }
-
-        private void Jump()
-        {
-            _rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            _playerController?.SetCamera(_playerCamera);
         }
 
         private void ApplyPlayerMaterial(int id)
@@ -218,7 +182,9 @@ namespace Friendslop
                 _renderer.material = playerMaterials[materialIndex];
             }
         }
+        #endregion
 
+        #region ServerRPCs
         private void OnPlayerIdChanged(ulong oldValue, ulong newValue)
         {
             ApplyPlayerMaterial((int)(newValue % int.MaxValue));
@@ -230,37 +196,7 @@ namespace Friendslop
             playerId.Value = rpcParams.Receive.SenderClientId;
         }
 
-        [ServerRpc]
-        private void UpdatePositionServerRpc(Vector3 position, Quaternion rotation)
-        {
-            networkPosition.Value = position;
-            networkRotation.Value = rotation;
-        }
-
-        [ServerRpc]
-        private void ShootServerRpc()
-        {
-            ShootClientRpc();
-        }
-
-        [ClientRpc]
-        private void ShootClientRpc()
-        {
-            if (!IsOwner && gun != null)
-            {
-                gun.TryShoot();
-            }
-        }
-
-        private void OnDrawGizmosSelected()
-        {
-            if (groundCheck != null)
-            {
-                Gizmos.color = _isGrounded ? Color.green : Color.red;
-                Gizmos.DrawWireSphere(groundCheck.position, groundDistance);
-            }
-        }
-
         public ulong PlayerId => playerId.Value;
+        #endregion
     }
 }
