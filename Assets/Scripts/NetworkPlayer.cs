@@ -4,11 +4,7 @@ using Unity.Netcode;
 namespace Friendslop
 {
     [RequireComponent(typeof(NetworkObject))]
-<<<<<<< HEAD
-=======
-    [RequireComponent(typeof(Rigidbody))]
     [RequireComponent(typeof(PlayerHealth))]
->>>>>>> origin/copilot/add-environmental-hazards
     public class NetworkPlayer : NetworkBehaviour
     {
         [Header("Player Info")]

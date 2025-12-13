@@ -103,7 +103,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2345678901
+  GlobalObjectIdHash: 3480011781
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 2
@@ -125,14 +125,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 7890123456789012345}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c3d4e5f6a7b89012345678abcdef03, type: 3}
+  m_Script: {fileID: 11500000, guid: 6058583570363b0489bdb4b055c19bc7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Friendslop.Hazards.CrystalSpikeHazard
-  damage: 20
+  ShowTopMostFoldoutHeaderGroup: 1
+  damage: 10
   damageInterval: 1
   isActive: 1
   hazardColor: {r: 1, g: 0, b: 0, a: 1}
-  activeColor: {r: 1, g: 1, b: 0, a: 1}
+  activeColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   inactiveColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   eruptionInterval: 3
   warningDuration: 1

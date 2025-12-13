@@ -18,7 +18,7 @@ namespace Friendslop
         [SerializeField] private Color damageFlashColor = Color.red;
         [SerializeField] private float damageFlashDuration = 0.2f;
 
-        private NetworkVariable<int> _currentHealth = new NetworkVariable<int>(
+        [SerializeField] private NetworkVariable<int> _currentHealth = new NetworkVariable<int>(
             100,
             NetworkVariableReadPermission.Everyone,
             NetworkVariableWritePermission.Server

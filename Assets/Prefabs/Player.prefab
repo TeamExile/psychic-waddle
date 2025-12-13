@@ -356,12 +356,8 @@ GameObject:
   - component: {fileID: 941888720552896671}
   - component: {fileID: 3739413341062825516}
   - component: {fileID: 8373688897059978800}
-<<<<<<< HEAD
   - component: {fileID: 4382834330801742982}
   - component: {fileID: 8485024424392153833}
-=======
-  - component: {fileID: 1234567890123456789}
->>>>>>> origin/copilot/add-environmental-hazards
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -450,21 +446,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Friendslop.NetworkPlayer
   ShowTopMostFoldoutHeaderGroup: 1
   playerMaterials:
-<<<<<<< HEAD
   - {fileID: 2100000, guid: 0f8a328c86275544f8cc13e0438c98e7, type: 2}
   - {fileID: 2100000, guid: 44afb612c2ec323458bc31db3c20ec13, type: 2}
   - {fileID: 2100000, guid: 9f332cba8eeef32449c8b30e0e1cfb58, type: 2}
   - {fileID: 2100000, guid: fb3109a5abc872547be1235fdaaa10ae, type: 2}
   _playerCamera: {fileID: 8207131789402093732}
 --- !u!114 &4382834330801742982
-=======
-  - {fileID: 2100000, guid: a52beed3b1dc1cb4586a20a0889ca3c4, type: 2}
-  - {fileID: 2100000, guid: 32e83e60de2c7f84f9c5f34679e42895, type: 2}
-  - {fileID: 2100000, guid: c5d125486ab41604f8825018fc47a596, type: 2}
-  - {fileID: 2100000, guid: 9ec0213a7d5557d4da0956ff4e3bcdf5, type: 2}
-  playerCameraPrefab: {fileID: 7020385529256352870, guid: d72a68ecffccb744591098aac1748cb2, type: 3}
---- !u!114 &1234567890123456789
->>>>>>> origin/copilot/add-environmental-hazards
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -473,7 +460,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 6046600344420062116}
   m_Enabled: 1
   m_EditorHideFlags: 0
-<<<<<<< HEAD
   m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.Components.NetworkTransform
@@ -538,12 +524,3 @@ MonoBehaviour:
   lookSensitivity: 1.5
   lookSmoothing: 0.05
   maxLookAngle: 90
-=======
-  m_Script: {fileID: 11500000, guid: 9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Friendslop.PlayerHealth
-  maxHealth: 100
-  invulnerabilityDuration: 0.5
-  damageFlashColor: {r: 1, g: 0, b: 0, a: 1}
-  damageFlashDuration: 0.2
->>>>>>> origin/copilot/add-environmental-hazards
