@@ -1,4 +1,4 @@
-using UnityEngine;
+    using UnityEngine;
 using Unity.Netcode;
 
 namespace Friendslop
@@ -15,6 +15,9 @@ namespace Friendslop
 
         // reference to movement component
         private PlayerController _playerController;
+
+        // track whether this instance created the camera so we only destroy cameras we created
+        private bool _createdLocalCamera;
 
         private void Awake()
         {
@@ -39,9 +42,36 @@ namespace Friendslop
                 _playerController.SetControlActive(IsOwner);
             }
 
+            // If the prefab contains a Camera as a child, make sure only the owner enables/uses it.
+            Camera childCam = GetComponentInChildren<Camera>(true);
+            if (childCam != null)
+            {
+                if (IsOwner)
+                {
+                    // Owner should use/enable the camera and register it as this player's camera.
+                    _playerCamera = childCam;
+                    _playerCamera.enabled = true;
+                    _playerController?.SetCamera(_playerCamera);
+                    _createdLocalCamera = false; // camera came from prefab
+                }
+                else
+                {
+                    // Non-owners should NOT have their player cameras enabled locally.
+                    // Disable so it doesn't interfere with the local client's view.
+                    childCam.enabled = false;
+
+                    // If the prefab camera had the MainCamera tag (common mistake), remove it so it
+                    // doesn't change Camera.main for the whole process (host/editor scenarios).
+                    if (childCam.CompareTag("MainCamera"))
+                    {
+                        childCam.tag = "Untagged";
+                    }
+                }
+            }
+
             if (IsOwner)
             {
-                // owner-specific setup: request id and make camera
+                // owner-specific setup: request id and make camera if none found
                 RequestPlayerIdServerRpc();
 
                 // ensure camera is created for owner (OnGainedOwnership may not fire reliably on all netcode versions)
@@ -68,7 +98,20 @@ namespace Friendslop
                 _playerController.SetControlActive(true);
             }
 
-            SetupPlayerCamera();
+            // If a prefab camera existed and was disabled on non-owner clients, enable it now.
+            Camera childCam = GetComponentInChildren<Camera>(true);
+            if (childCam != null)
+            {
+                _playerCamera = childCam;
+                _playerCamera.enabled = true;
+                _playerController?.SetCamera(_playerCamera);
+                _createdLocalCamera = false;
+            }
+            else
+            {
+                // otherwise create one
+                SetupPlayerCamera();
+            }
         }
 
         public override void OnNetworkDespawn()
@@ -84,10 +127,20 @@ namespace Friendslop
             // remove handler
             playerId.OnValueChanged -= OnPlayerIdChanged;
 
-            // destroy local camera instance (only the owner created it)
-            if (_playerCamera != null)
+            // destroy only the camera this instance created (owner only)
+            if (_createdLocalCamera && _playerCamera != null)
             {
                 Destroy(_playerCamera.gameObject);
+                _playerCamera = null;
+                _createdLocalCamera = false;
+            }
+            else if (_playerCamera != null && IsOwner == false)
+            {
+                // ensure we don't leave a disabled prefab camera tagged as MainCamera by accident
+                if (_playerCamera.CompareTag("MainCamera"))
+                {
+                    _playerCamera.tag = "Untagged";
+                }
                 _playerCamera = null;
             }
         }
@@ -96,24 +149,28 @@ namespace Friendslop
         #region PlayerSetupMethods
         private void SetupPlayerCamera()
         {
-            // If camera already exists (reconnect scenarios) don't create another
+            // Only run for the local owner — every client should create/own its own camera.
+            if (!IsOwner) return;
+
+            // If we already have a cached reference (from prefab or earlier), don't create another
             if (_playerCamera != null) return;
 
-            // Destroy any existing main camera (optional, for single-player scenes)
-            Camera mainCam = Camera.main;
-            if (mainCam != null && mainCam.gameObject != null)
-            {
-                Destroy(mainCam.gameObject);
-            }
-
-            // Create a new camera and attach it to this player
-            GameObject camObj = new GameObject("PlayerCamera");
+            // Create a new camera and attach it to this player (local owner only)
+            GameObject camObj = new GameObject($"PlayerCamera_{NetworkManager.Singleton.LocalClientId}");
             _playerCamera = camObj.AddComponent<Camera>();
             camObj.transform.SetParent(transform);
             camObj.transform.localPosition = new Vector3(0, 0.8f, 0.6f); // Adjust for FPS or 3rd person
             camObj.transform.localRotation = Quaternion.identity;
-            _playerCamera.tag = "MainCamera";
-            _playerController.SetCamera(_playerCamera);
+
+            // Do not set the "MainCamera" tag here. Camera.main is a global convenience and
+            // will always resolve to the last camera tagged "MainCamera" in the same process.
+            // For local ownership we only need the camera component enabled for this client.
+            _playerCamera.enabled = true;
+
+            // mark that we created this camera so we can clean it up on despawn
+            _createdLocalCamera = true;
+
+            _playerController?.SetCamera(_playerCamera);
         }
 
         private void ApplyPlayerMaterial(int id)
